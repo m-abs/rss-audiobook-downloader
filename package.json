@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "format": "prettier -c .prettierrc.json --write 'src/**/*.ts'",
     "clean": "rimraf dist",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"

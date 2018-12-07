@@ -9,7 +9,7 @@ const fsExists = promisify(fs.exists);
 
 async function downloadFile(url: string, filename: string) {
   if (await fsExists(filename)) {
-    console.log(`"${filename}" exists`);
+    console.warn(`"${filename}" exists`);
     return;
   }
 
@@ -22,6 +22,7 @@ async function downloadFile(url: string, filename: string) {
       if (res.statusCode !== 200) {
         fileStream.close();
         reject();
+
         return;
       }
 
@@ -29,13 +30,12 @@ async function downloadFile(url: string, filename: string) {
     });
 
     req.on('end', () => {
-      console.log(`"${url}" downloaded to "${filename}"`);
+      console.debug(`"${url}" downloaded to "${filename}"`);
+
       resolve();
     });
 
-    req.on('error', (err) => {
-      reject(err);
-    });
+    req.on('error', (err) => reject(err));
   });
 }
 
@@ -73,16 +73,23 @@ function worker(url: string) {
   feed.on('end', async () => {
     for (const [idx, item] of Object.entries(items.reverse())) {
       const i = `${Number(idx) + 1}`;
-      const downloadUrl = typeof item.enclosures[0] === 'string' ? item.enclosures[0] : (item.enclosures[0] as any).url;
+
+      const downloadUrl =
+        typeof item.enclosures[0] === 'string'
+          ? item.enclosures[0]
+          : (item.enclosures[0] as any).url;
       const ext = path.extname(URL.parse(downloadUrl).path!);
 
       const filename = `${i.padStart(3, '0')} ${item.title}${ext}`;
-      if (!await fsExists(filename)) {
+      if (!(await fsExists(filename))) {
         await downloadFile(downloadUrl, filename);
-
-        break;
       }
     }
+  });
+
+  feed.on('error', (error: any) => {
+    // handle any request errors
+    console.error(error);
   });
 }
 
